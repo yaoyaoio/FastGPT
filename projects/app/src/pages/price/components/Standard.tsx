@@ -7,9 +7,8 @@ import { postCheckStandardSub, postUpdateStandardSub } from '@/web/support/walle
 import { useSystemStore } from '@/web/common/system/useSystemStore';
 import { standardSubLevelMap } from '@fastgpt/global/support/wallet/sub/constants';
 import { StandardSubPlanParams } from '@fastgpt/global/support/wallet/sub/api';
-import { useRequest } from '@fastgpt/web/hooks/useRequest';
+import { useRequest, useRequest2 } from '@fastgpt/web/hooks/useRequest';
 import { StandardSubPlanUpdateResponse } from '@fastgpt/global/support/wallet/sub/api.d';
-import { useToast } from '@fastgpt/web/hooks/useToast';
 import { formatStorePrice2Read } from '@fastgpt/global/support/wallet/usage/tools';
 import { TeamSubSchema } from '@fastgpt/global/support/wallet/sub/type';
 import MyModal from '@fastgpt/web/components/common/MyModal';
@@ -63,15 +62,17 @@ const Standard = ({
       : [];
   }, [subPlans?.standard, selectSubMode]);
 
-  const { mutate: onclickUpdateStandardPlan, isLoading: isUpdatingStandardPlan } = useRequest({
-    mutationFn: (data: StandardSubPlanParams) => postUpdateStandardSub(data),
-    onSuccess() {
-      refetchTeamSubPlan();
-      router.reload();
-    },
-    successToast: t('support.wallet.subscription.Standard update success'),
-    errorToast: t('support.wallet.subscription.Standard update fail')
-  });
+  const { runAsync: onclickUpdateStandardPlan, loading: isUpdatingStandardPlan } = useRequest2(
+    postUpdateStandardSub,
+    {
+      onSuccess() {
+        refetchTeamSubPlan();
+        router.reload();
+      },
+      successToast: t('common:support.wallet.subscription.Standard update success'),
+      errorToast: t('common:support.wallet.subscription.Standard update fail')
+    }
+  );
 
   const { mutate: onclickPreCheckStandPlan, isLoading: isCheckingStandardPlan } = useRequest({
     mutationFn: (data: StandardSubPlanParams) => postCheckStandardSub(data),
@@ -98,21 +99,23 @@ const Standard = ({
   return (
     <Flex flexDirection={'column'} alignItems={'center'} position={'relative'}>
       <Box fontWeight={'bold'} fontSize={['24px', '36px']}>
-        {t('support.wallet.subscription.Sub plan')}
+        {t('common:support.wallet.subscription.Sub plan')}
       </Box>
-      <Box mt={8} mb={10} color={'myGray.500'} fontSize={'lg'}>
-        {t('support.wallet.subscription.Sub plan tip')}
+      <Box mt={8} mb={10} color={'myGray.500'} fontSize={'md'}>
+        {t('common:support.wallet.subscription.Sub plan tip', {
+          title: feConfigs?.systemTitle
+        })}
       </Box>
       <Box>
         <RowTabs
           list={[
-            { label: t('support.wallet.subscription.mode.Month'), value: SubModeEnum.month },
+            { label: t('common:support.wallet.subscription.mode.Month'), value: SubModeEnum.month },
             {
               label: (
                 <Flex>
-                  {t('support.wallet.subscription.mode.Year')}
+                  {t('common:support.wallet.subscription.mode.Year')}
                   <Box color={selectSubMode === SubModeEnum.month ? 'red.600' : 'auto'}>
-                    ({t('support.wallet.subscription.mode.Year sale')})
+                    ({t('common:support.wallet.subscription.mode.Year sale')})
                   </Box>
                 </Flex>
               ),
@@ -154,14 +157,14 @@ const Standard = ({
                     borderColor: 'myGray.150'
                   })}
             >
-              <Box fontSize={'lg'} fontWeight={'500'}>
-                {t(item.label)}
+              <Box fontSize={'md'} fontWeight={'500'}>
+                {t(item.label as any)}
               </Box>
               <Box fontSize={['32px', '42px']} fontWeight={'bold'}>
                 ￥{item.price}
               </Box>
               <Box color={'myGray.500'} h={'40px'} fontSize={'xs'}>
-                {t(item.desc, { title: feConfigs?.systemTitle })}
+                {t(item.desc as any, { title: feConfigs?.systemTitle })}
               </Box>
               {(() => {
                 if (
@@ -170,7 +173,7 @@ const Standard = ({
                 ) {
                   return (
                     <Button isDisabled mt={4} mb={6} w={'100%'} variant={'solid'}>
-                      {t('support.wallet.subscription.Nonsupport')}
+                      {t('common:support.wallet.subscription.Nonsupport')}
                     </Button>
                   );
                 }
@@ -180,7 +183,7 @@ const Standard = ({
                 ) {
                   return (
                     <Button mt={4} mb={6} w={'100%'} variant={'whiteBase'} isDisabled>
-                      {t('support.wallet.subscription.Next plan')}
+                      {t('common:support.wallet.subscription.Next plan')}
                     </Button>
                   );
                 }
@@ -202,7 +205,7 @@ const Standard = ({
                         })
                       }
                     >
-                      {t('support.wallet.subscription.Current plan')}
+                      {t('common:support.wallet.subscription.Current plan')}
                     </Button>
                   );
                 }
@@ -221,7 +224,7 @@ const Standard = ({
                       })
                     }
                   >
-                    {t('support.wallet.subscription.Buy now')}
+                    {t('common:support.wallet.subscription.Buy now')}
                   </Button>
                 );
               })()}
@@ -307,6 +310,7 @@ const ConfirmPayModal = ({
   onConfirmPay
 }: ConfirmPayModalProps & { onClose: () => void; onConfirmPay: () => void }) => {
   const { t } = useTranslation();
+
   const [qrPayData, setQRPayData] = useState<QRPayProps>();
 
   const formatPayPrice = Math.ceil(formatStorePrice2Read(payPrice));
@@ -329,25 +333,35 @@ const ConfirmPayModal = ({
     }
   });
 
+  const { runAsync: onPay, loading: onPaying } = useRequest2(async () => onConfirmPay());
+
   return (
     <MyModal
       isOpen
       iconSrc="modal/confirmPay"
-      title={t('support.wallet.Confirm pay')}
+      title={t('common:support.wallet.Confirm pay')}
       onClose={onClose}
     >
       <ModalBody py={5} px={9}>
         <Flex>
-          <Box flex={'0 0 100px'}>新套餐价格</Box>
-          <Box>{formatStorePrice2Read(totalPrice)}元</Box>
+          <Box flex={'0 0 100px'}>{t('common:pay.new_package_price')}</Box>
+          <Box>{t('common:pay.yuan', { amount: formatStorePrice2Read(totalPrice) })}</Box>
         </Flex>
         <Flex mt={6}>
-          <Box flex={'0 0 100px'}>旧套餐余额</Box>
-          <Box>{Math.floor(formatStorePrice2Read(totalPrice - payPrice))}元</Box>
+          <Box flex={'0 0 100px'}>{t('common:pay.old_package_price')}</Box>
+          <Box>
+            {t('common:pay.yuan', {
+              amount: Math.floor(formatStorePrice2Read(totalPrice - payPrice))
+            })}
+          </Box>
         </Flex>
         <Flex mt={6}>
-          <Box flex={'0 0 100px'}>需支付</Box>
-          <Box>{formatPayPrice}元</Box>
+          <Box flex={'0 0 100px'}>{t('common:pay.need_to_pay')}</Box>
+          <Box>
+            {t('common:pay.yuan', {
+              amount: formatPayPrice
+            })}
+          </Box>
         </Flex>
       </ModalBody>
       <ModalFooter
@@ -357,13 +371,15 @@ const ConfirmPayModal = ({
         justifyContent={'flex-start'}
         px={0}
       >
-        <Box>账号余额: </Box>
+        <Box>{t('common:pay.balance') + ': '}</Box>
         <Box ml={2} flex={1}>
-          {formatTeamBalance}元
+          {t('common:pay.yuan', {
+            amount: formatTeamBalance
+          })}
         </Box>
         {teamBalance >= payPrice ? (
-          <Button size={'sm'} onClick={onConfirmPay}>
-            确认支付
+          <Button isLoading={onPaying} size={'sm'} onClick={onPay}>
+            {t('common:pay.confirm_pay')}
           </Button>
         ) : (
           <Button
@@ -373,7 +389,7 @@ const ConfirmPayModal = ({
               handleClickPay(Math.ceil(formatStorePrice2Read(payPrice - teamBalance)));
             }}
           >
-            余额不足，去充值
+            {t('common:pay.to_recharge')}
           </Button>
         )}
       </ModalFooter>
